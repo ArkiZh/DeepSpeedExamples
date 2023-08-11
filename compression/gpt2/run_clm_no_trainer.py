@@ -66,7 +66,7 @@ MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
 print("============print args and env ===============")
 import sys
-# sys.argv.extend("--dataset_name wikitext --dataset_config_name wikitext-2-raw-v1 --model_name_or_path gpt2-large --per_device_train_batch_size 4 --num_train_epochs 0 --deepspeed_config config/ds_config_W8A8_Qgroup64_fp32.json --deepspeed --output_dir ./output/W8A8".split())
+sys.argv.extend("--local_rank 0 --dataset_name wikitext --dataset_config_name wikitext-2-raw-v1 --model_name_or_path gpt2-large --per_device_train_batch_size 4 --num_train_epochs 0 --deepspeed_config config/ds_config_W8A8_Qgroup64_fp32.json --deepspeed --output_dir ./output/W8A8".split())
 print(f"argv:\n{sys.argv}")
 import os
 os.environ["LOCAL_RANK"]="0"
@@ -251,7 +251,7 @@ def main():
 
     # Make one log on every process with the configuration for debugging.
     logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+        format="%(asctime)s - %(levelname)s - %(name)s ------ %(message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
         level=logging.INFO,
     )
