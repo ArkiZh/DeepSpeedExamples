@@ -101,11 +101,11 @@
           "enabled": SPARSE_PRUNING_ENABLE,
           "schedule_offset": SPARSE_PRUNING_OFFSET,
           "schedule_offset_end": SPARSE_PRUNING_OFFSET_END,
-	  "schedule_offset_stride": SPARSE_PRUNING_OFFSET_STRIDE,
+	        "schedule_offset_stride": SPARSE_PRUNING_OFFSET_STRIDE,
           "method": "snip_momentum",
-	  "block_pattern": SPARSE_PRUNING_BLOCK_PATTERN,
-	  "dense_ratio": S_DENSE_RATIO,
-	  "excluded_modules": SPARSE_PRUNING_EXCLUDED_MODULES
+          "block_pattern": SPARSE_PRUNING_BLOCK_PATTERN,
+          "dense_ratio": S_DENSE_RATIO,
+          "excluded_modules": SPARSE_PRUNING_EXCLUDED_MODULES
         },
         "different_groups": {
 	}

@@ -32,6 +32,13 @@ from tqdm.auto import tqdm
 
 import transformers
 from huggingface_hub import Repository
+
+
+# Suppress all future warnings
+import warnings
+warnings.simplefilter("ignore", category=FutureWarning)
+
+
 from transformers import (
     AdamW,
     AutoConfig,
@@ -188,6 +195,10 @@ def parse_args():
         default=1000,
         help="when to eval the model.")
 
+    import sys
+    if "--local-rank=0" in sys.argv:
+        sys.argv.remove("--local-rank=0")
+        sys.argv.extend("--local_rank 0".split())
     args = parser.parse_args()
 
     # Sanity checks

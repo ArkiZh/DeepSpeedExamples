@@ -1,6 +1,6 @@
 #!/bin/bash
 DIR=`pwd`
-export CUDA_VISIBLE_DEVICES=5
+# export CUDA_VISIBLE_DEVICES=5
 TASK_NAME=mnli  #mnli sst2 stsb mnli qqp rte cola mrpc qnli
 STAGE=one_stage
 LRATE=5e-5
@@ -67,7 +67,7 @@ CONFIG=${config_json}
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% the following command will first download huggingface models and then compress %%%%%%%
 MODEL=yoshitomo-matsubara/bert-base-uncased-${TASK_NAME} ## for both student and teacher
 run_cmd="python -m torch.distributed.launch --nproc_per_node=1 \
-  --master_port 66670 \
+  --master_port 6670 \
   run_glue_no_trainer.py \
   --seed 42 \
   --distill_method ${STAGE} \

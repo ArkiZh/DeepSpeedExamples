@@ -129,3 +129,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+compression/bert/config/ds_config_layer_reduction.json
+compression/bert/config/ds_config_pruning_sparse.json
+compression/bert/config/ds_config_pruning_head.json

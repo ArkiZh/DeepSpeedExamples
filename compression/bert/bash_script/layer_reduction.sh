@@ -11,7 +11,7 @@ SAVE_PATH=./out/layer_reduction/
 mkdir -p ${SAVE_PATH}
 ###Layer Reduction
 LAYER_REDUCTION_ENABLE="true" #<=============================================================
-FP16_ENABLE="true"
+FP16_ENABLE="false"
 
 ###weight quantization
 WEIGHT_QUANT_ENABLE="false"
@@ -65,7 +65,7 @@ CONFIG=${config_json}
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% the following command will first download huggingface models and then compress %%%%%%%
 MODEL=yoshitomo-matsubara/bert-base-uncased-${TASK_NAME} ## for both student and teacher
 run_cmd="python -m torch.distributed.launch --nproc_per_node=1 \
-  --master_port 66664 \
+  --master_port 6664 \
   run_glue_no_trainer.py \
   --seed 42 \
   --distill_method ${STAGE} \

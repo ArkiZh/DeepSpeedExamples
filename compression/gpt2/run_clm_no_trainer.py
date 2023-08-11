@@ -64,6 +64,30 @@ require_version("datasets>=1.8.0", "To fix: pip install -r examples/pytorch/lang
 MODEL_CONFIG_CLASSES = list(MODEL_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
+print("============print args and env ===============")
+import sys
+# sys.argv.extend("--dataset_name wikitext --dataset_config_name wikitext-2-raw-v1 --model_name_or_path gpt2-large --per_device_train_batch_size 4 --num_train_epochs 0 --deepspeed_config config/ds_config_W8A8_Qgroup64_fp32.json --deepspeed --output_dir ./output/W8A8".split())
+print(f"argv:\n{sys.argv}")
+import os
+os.environ["LOCAL_RANK"]="0"
+os.environ["RANK"]="0"
+os.environ["GROUP_RANK"]="0"
+os.environ["ROLE_RANK"]="0"
+os.environ["ROLE_NAME"]="default"
+os.environ["LOCAL_WORLD_SIZE"]="1"
+os.environ["WORLD_SIZE"]="1"
+os.environ["GROUP_WORLD_SIZE"]="1"
+os.environ["ROLE_WORLD_SIZE"]="1"
+os.environ["MASTER_ADDR"]="localhost.localdomain"
+os.environ["MASTER_PORT"]="49769"
+for k,v in os.environ.items():
+    print(f"===== ENV: {k}={v}")
+
+print("==============================================")    
+
+
+
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Finetune a transformers model on a causal language modeling task")
