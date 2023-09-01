@@ -1,0 +1,41 @@
+{
+    "train_batch_size": 32,
+    "train_micro_batch_size_per_gpu": 32,
+    "steps_per_print": 200,
+    "zero_optimization": {
+      "stage": 0
+    },
+    "fp16": {
+      "enabled": false
+    },
+    "gradient_clipping": 1.0,
+    "prescale_gradients": true,
+    "wall_clock_breakdown": false,
+    "compression_training": {
+      "head_pruning": {
+        "shared_parameters": {
+          "enabled": true,
+          "schedule_offset": 0,
+          "method": "topk",
+          "num_heads": 12
+        },
+        "different_groups": {
+          "rp1": {
+            "params": {
+              "dense_ratio": 0.6
+            },
+            "modules": [
+              "attention.output.dense"
+            ],
+            "related_modules": [
+              [
+                "self.query",
+                "self.key",
+                "self.value"
+              ]
+            ]
+          }
+        }
+      }
+    }
+  }

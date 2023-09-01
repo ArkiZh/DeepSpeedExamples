@@ -1,41 +1,12 @@
-#!/usr/bin/env python
-# coding=utf-8
-# Copyright 2021 The HuggingFace Inc. team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""
-Fine-tuning the library models for causal language modeling (GPT, GPT-2, CTRL, ...)
-on a text file or a dataset without using HuggingFace Trainer.
-
-Here is the full list of checkpoints on the hub that can be fine-tuned by this script:
-https://huggingface.co/models?filter=causal-lm
-"""
-# You can also adapt this script on your own causal language modeling task. Pointers for this are left as comments.
-
 import argparse
 import logging
 import math
 import os
-import random
-from pathlib import Path
-from re import L
 
-import datasets
 import torch
 from datasets import load_dataset
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
-from tqdm.auto import tqdm
 
 from transformers import (
     CONFIG_MAPPING,
@@ -49,24 +20,26 @@ from transformers import (
     get_scheduler,
     set_seed,
 )
-# from transformers.file_utils import get_full_repo_name
+
+
 from transformers.utils.versions import require_version
 import deepspeed
 from deepspeed.compression.compress import init_compression, redundancy_clean
 import numpy as np
 from transformers.modeling_utils import Conv1D
 from deepspeed.compression.helper import convert_conv1d_to_linear
+import util
+
 
 logger = logging.getLogger(__name__)
-
-require_version("datasets>=1.8.0", "To fix: pip install -r examples/pytorch/language-modeling/requirements.txt")
 
 MODEL_CONFIG_CLASSES = list(MODEL_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
 print("============print args and env ===============")
 import sys
-sys.argv.extend("--local_rank 0 --dataset_name wikitext --dataset_config_name wikitext-2-raw-v1 --model_name_or_path gpt2-large --per_device_train_batch_size 4 --num_train_epochs 0 --deepspeed_config config/ds_config_W8A8_Qgroup64_fp32.json --deepspeed --output_dir ./output/W8A8".split())
+sys.argv.extend("--max_train_steps 100 --local_rank 0 --dataset_name wikitext --dataset_config_name wikitext-2-raw-v1".split())
+sys.argv.extend("--model_name_or_path gpt2-large --per_device_train_batch_size 4 --num_train_epochs 1 --deepspeed_config ds_config_prune_head.json --deepspeed --output_dir ./output/prune_head".split())
 print(f"argv:\n{sys.argv}")
 import os
 os.environ["LOCAL_RANK"]="0"
@@ -344,6 +317,7 @@ def main():
 
     model.resize_token_embeddings(len(tokenizer))
     model.to(device)
+    util.model_info(model, "After load.")
     # Preprocessing the datasets.
     # First we tokenize all the texts.
     column_names = raw_datasets["train"].column_names
@@ -498,18 +472,19 @@ def main():
                 num_warmup_steps=args.num_warmup_steps,
                 num_training_steps=args.max_train_steps,
             )
+        util.model_info(model, "Before deepspeed initialize")
         model, optimizer, _, lr_scheduler = deepspeed.initialize(
             model=model,
             optimizer=optimizer,
             args=args,
             lr_scheduler=lr_scheduler,
             dist_init_required=True)
+        util.model_info(model, "After deepspeed initialize")
+        perplexity = evaluation(model, eval_dataloader)
+        print_rank_0 (f"*************************initialization with {perplexity}***********************************")            
         # Only show the progress bar once on each machine.
-        # completed_steps = 0
+        completed_steps = 0
         for epoch in range(num_train_epochs):
-            if epoch == 0:
-                perplexity = evaluation(model, eval_dataloader)
-                print_rank_0 (f"*************************initialization with {perplexity}***********************************")            
             model.train()
             for step, batch in enumerate(train_dataloader):
                 batch = to_device(batch)                
@@ -517,8 +492,12 @@ def main():
                 loss = outputs.loss
                 # loss = loss / args.gradient_accumulation_steps
                 model.backward(loss)
+                print(f"loss: {loss.item()}")
                 model.step()
-                
+                completed_steps+=1
+                if completed_steps>=args.max_train_steps:
+                    break
+
             # Evaluate perplexity on the validation set.
             if epoch != args.num_train_epochs-1:
                 print_rank_0(f"***** Evaluating perplexity, Epoch {epoch+1}/{num_train_epochs} *****")
@@ -534,24 +513,24 @@ def main():
                 os.makedirs(args.output_dir)
             if torch.distributed.get_rank() == 0:
                 model_to_save = model.module if hasattr(model, 'module') else model
-                # CONFIG_NAME = "config.json"
                 WEIGHTS_NAME = "pytorch_model.bin"
                 output_model_file = os.path.join(args.output_dir, WEIGHTS_NAME)
-                #output_config_file = os.path.join(args.output_dir, CONFIG_NAME)
                 torch.save(model_to_save.state_dict(), output_model_file)
-                #output_config_file = os.path.join(args.output_dir, CONFIG_NAME)
-                #model_to_save.config.to_json_file(output_config_file)
                 tokenizer.save_vocabulary(args.output_dir)
 
     perplexity = evaluation(model, eval_dataloader)
     print_rank_0(f"Before converting the module COVN1D to linear, and before applying init_compression: {perplexity}")
     model = convert_conv1d_to_linear(model, Conv1D)
+    util.model_info(model, "Before init_compression")
     model = init_compression(model, args.deepspeed_config)
     print_rank_0('WARNING: saving the quantized model with Linear Module instead of COV1D')
-
+    
+    
     training(model, train_dataloader, eval_dataloader, args.num_train_epochs, args)
 
+
     model = redundancy_clean(model, args.deepspeed_config)
+    util.model_info(model, "After cleaning.")
     perplexity = evaluation(model, eval_dataloader)
     print_rank_0(f"After cleaning with Perplexity: {perplexity}")
     

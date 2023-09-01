@@ -85,7 +85,7 @@ run_cmd="python -m torch.distributed.launch --nproc_per_node=1 \
   --deepspeed \
   --save_best_model --clean_best_model \
   --gradient_accumulation_steps 1 \
-  --max_train_steps 1000
+  --max_train_steps 1000 \
   --output_dir ${SAVE_PATH} | tee -a  ${SAVE_PATH}/train.log"
 
 echo ${run_cmd}

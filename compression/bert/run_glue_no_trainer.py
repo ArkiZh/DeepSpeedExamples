@@ -316,6 +316,7 @@ def main():
         config=config,
     )
     model.to(device)
+    model_info(model, "After load.")
     teacher_model  = None
     #### load teacher models
     if args.distill_method != 'zero_stage':
@@ -338,6 +339,7 @@ def main():
     if args.deepspeed:
         if quantization_enabled or prune_enabled or layer_reduction_enabled:
             model = init_compression(model, args.deepspeed_config, teacher_model=teacher_model)  #<==========================================compression argument
+            model_info(model, "After init_compression")
 
     if args.pretrained_dir_student is not None:
             model.load_state_dict(torch.load(args.pretrained_dir_student))  #<==========================================add weight to students if users provides difference models
@@ -481,7 +483,7 @@ def main():
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
         dist_init_required=True)
-
+    model_info(model, "After deepspeed initialize")
     if teacher_model is not None:
         teacher_model, _, _, _ = deepspeed.initialize(args=args, model=teacher_model)
 
